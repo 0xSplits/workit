@@ -22,12 +22,12 @@ func Test_Handler_Name(t *testing.T) {
 		},
 		// Case 001
 		{
-			han: &metadata.Handler{},
+			han: &metadata.Foo{},
 			nam: "metadata",
 		},
 		// Case 002
 		{
-			han: &operator.Handler{},
+			han: &operator.Operator{},
 			nam: "operator",
 		},
 	}

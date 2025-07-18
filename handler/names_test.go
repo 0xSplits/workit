@@ -19,8 +19,8 @@ func Test_Handler_Names(t *testing.T) {
 		{
 			han: []Interface{
 				&artefact.Handler{},
-				&metadata.Handler{},
-				&operator.Handler{},
+				&metadata.Foo{},
+				&operator.Operator{},
 			},
 			nam: []string{
 				"artefact",
