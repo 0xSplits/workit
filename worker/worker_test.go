@@ -1,4 +1,4 @@
-package engine
+package worker
 
 import (
 	"slices"
@@ -10,11 +10,11 @@ import (
 	"github.com/xh3b4sd/logger"
 )
 
-// Test_Engine_Daemon verifies the isolation of worker handler failure domains
+// Test_Worker_Daemon verifies the isolation of worker handler failure domains
 // so that the failure of one worker handler does not affect the execution of
 // another. For this test to be of any use, it must be executed using the -race
 // flag, which we do in CI according to .github/workflows/go-build.yaml.
-func Test_Engine_Daemon(t *testing.T) {
+func Test_Worker_Daemon(t *testing.T) {
 	// For this test we use signal channels that control the fake worker handlers
 	// that we schedule during testing. Every test handler receives its own input
 	// channel in order to simulate work. The behaviour of each test handler
@@ -38,9 +38,9 @@ func Test_Engine_Daemon(t *testing.T) {
 	// handler A blocks forever, even if it were to receive more execution tickets
 	// from its signal channel.
 
-	var eng *Engine
+	var wor *Worker
 	{
-		eng = New(Config{
+		wor = New(Config{
 			Env: "testing",
 			Han: []handler.Interface{
 				&testHandler{inp: in1, out: out, coo: time.Hour},
@@ -55,16 +55,16 @@ func Test_Engine_Daemon(t *testing.T) {
 		})
 	}
 
-	// Start the worker engine by calling Daemon() and wait for that goroutine to
-	// register. Once the unbuffered ready channel is closed, <-eng.rdy unblocks
-	// and the test execution starts.
+	// Start the worker engine by calling Worker.Daemon() and wait for that
+	// goroutine to register. Once the unbuffered ready channel is closed,
+	// <-wor.rdy unblocks and the test execution starts.
 
 	{
-		go eng.Daemon()
+		go wor.Daemon()
 	}
 
 	{
-		<-eng.rdy
+		<-wor.rdy
 	}
 
 	// We fill up the signal channels to equal amounts in order to verify that
