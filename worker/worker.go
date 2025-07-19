@@ -1,4 +1,4 @@
-package engine
+package worker
 
 import (
 	"fmt"
@@ -27,14 +27,14 @@ type Config struct {
 	Met metric.Meter
 }
 
-type Engine struct {
+type Worker struct {
 	han []handler.Interface
 	log logger.Interface
 	rdy chan struct{}
 	reg registry.Interface
 }
 
-func New(c Config) *Engine {
+func New(c Config) *Worker {
 	if c.Env == "" {
 		tracer.Panic(tracer.Mask(fmt.Errorf("%T.Env must not be empty", c)))
 	}
@@ -48,12 +48,18 @@ func New(c Config) *Engine {
 		tracer.Panic(tracer.Mask(fmt.Errorf("%T.Met must not be empty", c)))
 	}
 
+	var nam []string
+	{
+		nam = handler.Names(c.Han)
+	}
+
 	cou := map[string]recorder.Interface{}
 
 	{
 		cou[MetricTotal] = recorder.NewCounter(recorder.CounterConfig{
 			Des: "the total amount of worker handler executions",
 			Lab: map[string][]string{
+				"handler": nam,
 				"success": {"true", "false"},
 			},
 			Met: c.Met,
@@ -69,7 +75,7 @@ func New(c Config) *Engine {
 		his[MetricDuration] = recorder.NewHistogram(recorder.HistogramConfig{
 			Des: "the time it takes for worker handler executions to complete",
 			Lab: map[string][]string{
-				"handler": handler.Names(c.Han),
+				"handler": nam,
 				"success": {"true", "false"},
 			},
 			Buc: []float64{
@@ -107,7 +113,7 @@ func New(c Config) *Engine {
 		})
 	}
 
-	return &Engine{
+	return &Worker{
 		han: c.Han,
 		log: c.Log,
 		rdy: rdy,
@@ -115,11 +121,11 @@ func New(c Config) *Engine {
 	}
 }
 
-func (e *Engine) Daemon() {
-	e.log.Log(
+func (w *Worker) Daemon() {
+	w.log.Log(
 		"level", "info",
 		"message", "worker is executing tasks",
-		"pipelines", strconv.Itoa(len(e.han)),
+		"pipelines", strconv.Itoa(len(w.han)),
 	)
 
 	// Bootstrap a static worker pool of N goroutines, where N is the number of
@@ -128,12 +134,12 @@ func (e *Engine) Daemon() {
 	// any handler specific runtime errors and execution delays cannot affect the
 	// execution of the other worker handlers.
 
-	for _, h := range e.han {
-		go e.daemon(h)
+	for _, h := range w.han {
+		go w.daemon(h)
 	}
 
 	// Signal the worker daemon's readiness by closing the internal ready channel.
-	// This mechanism implies that Engine.Daemon() must never be called twice,
+	// This mechanism implies that Worker.Daemon() must never be called twice,
 	// because closing a closed channel results in a runtime panic. Time based
 	// systems are often a source of race conditions. Providing this mechanism may
 	// help facilitate e.g. unit tests concerned with concurrency patterns, so
@@ -141,11 +147,11 @@ func (e *Engine) Daemon() {
 	// problem domains.
 
 	{
-		close(e.rdy)
+		close(w.rdy)
 	}
 
 	// Once the static worker pool created all necessary goroutines, we block
-	// Engine.Daemon forever as a long running process, so that we do not risk
+	// Worker.Daemon forever as a long running process, so that we do not risk
 	// terminating the goroutines that we just bootstrapped.
 
 	{
@@ -153,11 +159,11 @@ func (e *Engine) Daemon() {
 	}
 }
 
-func (e *Engine) daemon(han handler.Interface) {
+func (w *Worker) daemon(han handler.Interface) {
 	for {
-		err := e.ensure(han)
+		err := w.ensure(han)
 		if err != nil {
-			e.error(err)
+			w.error(err)
 		}
 
 		// Sleep for the given duration after this worker handler has been executed.
@@ -170,7 +176,7 @@ func (e *Engine) daemon(han handler.Interface) {
 	}
 }
 
-func (e *Engine) ensure(han handler.Interface) error {
+func (w *Worker) ensure(han handler.Interface) error {
 	// Record the start time for our handler latency. The timezone of the duration
 	// measurement is irrelavant here, so we are not using time.Now().UTC() as a
 	// best practice like we would in other places.
@@ -189,7 +195,7 @@ func (e *Engine) ensure(han handler.Interface) error {
 	{
 		err = han.Ensure()
 		if err != nil {
-			e.error(err)
+			w.error(err)
 		}
 	}
 
@@ -204,7 +210,7 @@ func (e *Engine) ensure(han handler.Interface) error {
 		suc = strconv.FormatBool(err == nil)
 	}
 
-	e.log.Log(
+	w.log.Log(
 		"level", "debug",
 		"message", "executed worker handler",
 		"handler", handler.Name(han),
@@ -217,7 +223,7 @@ func (e *Engine) ensure(han handler.Interface) error {
 			"success": suc,
 		}
 
-		err := e.reg.Counter(MetricTotal, 1, lab)
+		err := w.reg.Counter(MetricTotal, 1, lab)
 		if err != nil {
 			return tracer.Mask(err)
 		}
@@ -229,7 +235,7 @@ func (e *Engine) ensure(han handler.Interface) error {
 			"success": suc,
 		}
 
-		err := e.reg.Histogram(MetricDuration, lat.Seconds(), lab)
+		err := w.reg.Histogram(MetricDuration, lat.Seconds(), lab)
 		if err != nil {
 			return tracer.Mask(err)
 		}
@@ -238,8 +244,8 @@ func (e *Engine) ensure(han handler.Interface) error {
 	return nil
 }
 
-func (e *Engine) error(err error) {
-	e.log.Log(
+func (w *Worker) error(err error) {
+	w.log.Log(
 		"level", "error",
 		"message", err.Error(),
 		"stack", tracer.Json(err),
