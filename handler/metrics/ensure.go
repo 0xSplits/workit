@@ -49,7 +49,7 @@ func (m *Metrics) musIns(sta time.Time, err error) {
 	var suc string
 	{
 		lat = time.Since(sta)
-		suc = strconv.FormatBool(err == nil)
+		suc = strconv.FormatBool(err == nil || m.fil(err))
 	}
 
 	m.log.Log(

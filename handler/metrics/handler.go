@@ -17,12 +17,14 @@ const (
 
 type Config struct {
 	Env string
+	Fil func(error) bool
 	Han handler.Interface
 	Log logger.Interface
 	Met metric.Meter
 }
 
 type Metrics struct {
+	fil func(error) bool
 	han handler.Interface
 	log logger.Interface
 	nam string
@@ -30,6 +32,9 @@ type Metrics struct {
 }
 
 func New(c Config) *Metrics {
+	if c.Fil == nil {
+		tracer.Panic(tracer.Mask(fmt.Errorf("%T.Fil must not be empty", c)))
+	}
 	if c.Han == nil {
 		tracer.Panic(tracer.Mask(fmt.Errorf("%T.Han must not be empty", c)))
 	}
@@ -51,6 +56,7 @@ func New(c Config) *Metrics {
 	}
 
 	return &Metrics{
+		fil: c.Fil,
 		han: c.Han,
 		log: c.Log,
 		nam: nam,
