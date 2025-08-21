@@ -18,7 +18,7 @@ func (w *Worker) Daemon() {
 		// handler's business logic. Any error returned to us may be annotated with
 		// the underlying handler name.
 
-		err := w.ensure()
+		err := w.Ensure()
 		if err != nil && !w.reg.Log(err) {
 			w.error(tracer.Mask(err))
 		}

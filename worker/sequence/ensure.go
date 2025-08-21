@@ -6,14 +6,14 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func (g *Worker) ensure() error {
-	for _, x := range g.han {
+func (w *Worker) Ensure() error {
+	for _, x := range w.han {
 		var err error
 
 		if len(x) == 1 {
-			err = g.ensSeq(x)
+			err = w.ensSeq(x)
 		} else {
-			err = g.ensPar(x)
+			err = w.ensPar(x)
 		}
 
 		if err != nil {
@@ -24,7 +24,7 @@ func (g *Worker) ensure() error {
 	return nil
 }
 
-func (g *Worker) ensPar(han []handler.Interface) error {
+func (w *Worker) ensPar(han []handler.Interface) error {
 	var grp errgroup.Group
 	{
 		grp = errgroup.Group{}
@@ -61,7 +61,7 @@ func (g *Worker) ensPar(han []handler.Interface) error {
 	return nil
 }
 
-func (g *Worker) ensSeq(han []handler.Interface) error {
+func (w *Worker) ensSeq(han []handler.Interface) error {
 	var x handler.Interface
 	{
 		x = han[0]
