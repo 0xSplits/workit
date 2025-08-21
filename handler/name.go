@@ -6,7 +6,7 @@ import (
 )
 
 // Name returns the package declaration of the given handler implementation.
-func Name(h Interface) string {
+func Name(h Ensure) string {
 	//
 	//     *artefact.Handler
 	//
