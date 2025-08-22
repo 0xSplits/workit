@@ -6,14 +6,18 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// Ensure executes a single reconciliation loop of the directed acyclic graph.
+// This method is exposed publicly so that not only the worker daemon can run
+// this sequence of worker handlers continuously, but also to enable other
+// commands to run this sequence once in a controlled fashion.
 func (w *Worker) Ensure() error {
 	for _, x := range w.han {
 		var err error
 
 		if len(x) == 1 {
-			err = w.ensSeq(x)
+			err = w.ensSeq(x) // execute a single worker handler
 		} else {
-			err = w.ensPar(x)
+			err = w.ensPar(x) // execute all worker handlers concurrently
 		}
 
 		if err != nil {
@@ -64,7 +68,7 @@ func (w *Worker) ensPar(han []handler.Interface) error {
 func (w *Worker) ensSeq(han []handler.Interface) error {
 	var x handler.Interface
 	{
-		x = han[0]
+		x = han[0] // the factory at sequence.New must validate against empty steps
 	}
 
 	// Note that our worker handlers may be wrapped. So we have to call unwrap
