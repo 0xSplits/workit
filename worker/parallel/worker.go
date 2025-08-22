@@ -1,67 +1,58 @@
-package worker
+package parallel
 
 import (
 	"fmt"
 	"strconv"
-	"time"
 
 	"github.com/0xSplits/workit/handler"
-	"github.com/0xSplits/workit/handler/metrics"
+	"github.com/0xSplits/workit/registry"
 	"github.com/xh3b4sd/logger"
 	"github.com/xh3b4sd/tracer"
-	"go.opentelemetry.io/otel/metric"
 )
 
 type Config struct {
-	// Env is the environment identifier injected to the internally managed
-	// registry interface to annotate all metrics with the respective label, e.g.
-	// "env=staging".
-	Env string
-
-	// Fil is an optional error matcher to ignore certain errors returned by the
-	// executed worker handlers, in order to suppress their associated error logs.
-	// All errors will be logged by default.
-	Fil func(error) bool
-
-	// Han is the list of worker handlers implementing the actual business logic.
-	// The worker handlers configured here may be wrapped in administrative
-	// handler implementations to e.g. instrument handler execution latency and
-	// handler error rates. All worker handlers provided here will be executed
-	// concurrently within their own isolated failure domain.
-	Han []handler.Interface
+	// Han is the list of worker handlers implementing the actual business logic
+	// as distinct execution pipelines. The worker handlers configured here may be
+	// wrapped in administrative handler implementations to e.g. instrument
+	// handler execution latency and handler error rates. All worker handlers
+	// provided here will be executed concurrently within their own isolated
+	// failure domain.
+	Han []handler.Cooler
 
 	// Log is a standard logger interface to forward structured log messages to
 	// any output interface e.g. stdout.
 	Log logger.Interface
 
-	// Met is the open telemetry meter interface injected to the internally
-	// managed registry interface. This meter will record all worker handler
-	// execution metrics.
-	Met metric.Meter
+	// Reg is the metrics interface used to wrap the internally managed handlers
+	// for instrumentation purposes. The metrics handlers created by this registry
+	// will record all worker handler execution metrics.
+	Reg *registry.Registry
 }
 
 type Worker struct {
-	fil func(error) bool
 	han []handler.Interface
 	log logger.Interface
+	reg *registry.Registry
 	rdy chan struct{}
 }
 
 func New(c Config) *Worker {
-	if c.Env == "" {
-		tracer.Panic(tracer.Mask(fmt.Errorf("%T.Env must not be empty", c)))
-	}
-	if c.Fil == nil {
-		c.Fil = func(_ error) bool { return false }
-	}
 	if len(c.Han) == 0 {
 		tracer.Panic(tracer.Mask(fmt.Errorf("%T.Han must not be empty", c)))
 	}
 	if c.Log == nil {
 		tracer.Panic(tracer.Mask(fmt.Errorf("%T.Log must not be empty", c)))
 	}
-	if c.Met == nil {
-		tracer.Panic(tracer.Mask(fmt.Errorf("%T.Met must not be empty", c)))
+	if c.Reg == nil {
+		tracer.Panic(tracer.Mask(fmt.Errorf("%T.Reg must not be empty", c)))
+	}
+
+	// Verify early on that no handler leaf is ever nil.
+
+	for i, x := range c.Han {
+		if x == nil {
+			tracer.Panic(tracer.Mask(fmt.Errorf("%T.Han[%d] must not be empty", c, i)))
+		}
 	}
 
 	// Wrap the list of injected worker handlers into their own metrics handler,
@@ -70,13 +61,7 @@ func New(c Config) *Worker {
 
 	var han []handler.Interface
 	for _, x := range c.Han {
-		han = append(han, metrics.New(metrics.Config{
-			Env: c.Env,
-			Fil: c.Fil,
-			Han: x,
-			Log: c.Log,
-			Met: c.Met,
-		}))
+		han = append(han, c.Reg.New(x))
 	}
 
 	var rdy chan struct{}
@@ -85,9 +70,9 @@ func New(c Config) *Worker {
 	}
 
 	return &Worker{
-		fil: c.Fil,
 		han: han,
 		log: c.Log,
+		reg: c.Reg,
 		rdy: rdy,
 	}
 }
@@ -106,7 +91,7 @@ func (w *Worker) Daemon() {
 	// execution of the other worker handlers.
 
 	for _, h := range w.han {
-		go w.daemon(h)
+		go w.ensure(h)
 	}
 
 	// Signal the worker engine's readiness by closing the internal ready channel.
@@ -127,28 +112,6 @@ func (w *Worker) Daemon() {
 
 	{
 		select {}
-	}
-}
-
-func (w *Worker) daemon(han handler.Interface) {
-	for {
-		// Execute the worker handler and log any runtime error of this handler's
-		// business logic if the configured error matcher permits it. Note that any
-		// error caught here may never originate from the worker engine's internal
-		// metric registry.
-
-		err := han.Ensure()
-		if err != nil && !w.fil(err) {
-			w.error(tracer.Mask(err, tracer.Context{Key: "handler", Value: handler.Name(han)}))
-		}
-
-		// Sleep for the given duration after this worker handler has been executed.
-		// This specific cycle repeats again for the given worker handler only,
-		// after the sleep below is over.
-
-		{
-			time.Sleep(han.Cooler())
-		}
 	}
 }
 

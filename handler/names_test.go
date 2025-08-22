@@ -12,12 +12,12 @@ import (
 
 func Test_Handler_Names(t *testing.T) {
 	testCases := []struct {
-		han []Interface
+		han []Ensure
 		nam []string
 	}{
 		// Case 000
 		{
-			han: []Interface{
+			han: []Ensure{
 				&artefact.Handler{},
 				&metadata.Foo{},
 				&operator.Operator{},

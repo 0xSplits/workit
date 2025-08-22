@@ -12,7 +12,7 @@ import (
 
 func Test_Handler_Name(t *testing.T) {
 	testCases := []struct {
-		han Interface
+		han Ensure
 		nam string
 	}{
 		// Case 000

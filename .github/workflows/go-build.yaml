@@ -2,12 +2,15 @@
 # Do not edit. This file was generated via the "workflow" command line tool.
 # More information about the tool can be found at github.com/xh3b4sd/workflow.
 #
-#     workflow create golang --binary=false
+#     workflow create golang
 #
 
 name: "go-build"
 
 on: "push"
+
+permissions:
+  contents: read
 
 jobs:
   go-build:
@@ -27,22 +30,15 @@ jobs:
           go mod tidy
           git diff --exit-code
 
-      - name: "Run Go Build"
-        env:
-          CGO_ENABLED: "0"
-        run: |
-          go build ./...
-
-      - name: "Check Go Tests"
-        run: |
-          go test ./... -race
+      - name: "Check Go Linters"
+        uses: "golangci/golangci-lint-action@v8"
+        with:
+          version: "latest"
 
       - name: "Check Go Formatting"
         run: |
           test -z $(gofmt -l -s .)
 
-      - name: "Check Go Linters"
+      - name: "Check Go Tests"
         run: |
-          curl -LOs https://github.com/golangci/golangci-lint/releases/download/v1.64.5/golangci-lint-1.64.5-linux-amd64.tar.gz
-          tar -xzf golangci-lint-1.64.5-linux-amd64.tar.gz
-          ./golangci-lint-1.64.5-linux-amd64/golangci-lint run
+          go test ./... -race

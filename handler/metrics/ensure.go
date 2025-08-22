@@ -11,7 +11,7 @@ import (
 // of the wrapped worker handler. The wrapped business logic is instrumented for
 // runtime latency and error rates. Note that Ensure emits debug logs about the
 // internal worker handler execution. Any error returned originates from the
-// underlying handler implementation.
+// underlying handler implementation, not from the metrics collection process.
 func (m *Metrics) Ensure() error {
 	// Record the start time for our handler latency. The timezone of the duration
 	// measurement is irrelavant here, so we are not using time.Now().UTC() as a
@@ -38,13 +38,13 @@ func (m *Metrics) Ensure() error {
 	// instrumentation succeeded once, it may never fail again during runtime.
 
 	{
-		m.musIns(sta, err)
+		m.insHan(sta, err)
 	}
 
 	return tracer.Mask(err)
 }
 
-func (m *Metrics) musIns(sta time.Time, err error) {
+func (m *Metrics) insHan(sta time.Time, err error) {
 	var lat time.Duration
 	var suc string
 	{
@@ -54,7 +54,7 @@ func (m *Metrics) musIns(sta time.Time, err error) {
 
 	m.log.Log(
 		"level", "debug",
-		"message", "executed worker handler",
+		"message", "instrumented worker handler",
 		"handler", m.nam,
 		"latency", lat.String(),
 		"success", suc,
@@ -67,11 +67,19 @@ func (m *Metrics) musIns(sta time.Time, err error) {
 
 	err = m.reg.Counter(MetricTotal, 1, lab)
 	if err != nil {
-		tracer.Panic(tracer.Mask(err))
+		m.log.Log(
+			"level", "error",
+			"message", "worker instrumentation failed",
+			"stack", tracer.Json(err),
+		)
 	}
 
 	err = m.reg.Histogram(MetricDuration, lat.Seconds(), lab)
 	if err != nil {
-		tracer.Panic(tracer.Mask(err))
+		m.log.Log(
+			"level", "error",
+			"message", "worker instrumentation failed",
+			"stack", tracer.Json(err),
+		)
 	}
 }

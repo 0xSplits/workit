@@ -7,7 +7,6 @@ import (
 	"github.com/0xSplits/workit/handler"
 	"github.com/xh3b4sd/logger"
 	"github.com/xh3b4sd/tracer"
-	"go.opentelemetry.io/otel/metric"
 )
 
 const (
@@ -16,11 +15,11 @@ const (
 )
 
 type Config struct {
-	Env string
 	Fil func(error) bool
 	Han handler.Interface
 	Log logger.Interface
-	Met metric.Meter
+	Nam string
+	Reg registry.Interface
 }
 
 type Metrics struct {
@@ -41,25 +40,18 @@ func New(c Config) *Metrics {
 	if c.Log == nil {
 		tracer.Panic(tracer.Mask(fmt.Errorf("%T.Log must not be empty", c)))
 	}
-	if c.Met == nil {
-		tracer.Panic(tracer.Mask(fmt.Errorf("%T.Met must not be empty", c)))
+	if c.Nam == "" {
+		tracer.Panic(tracer.Mask(fmt.Errorf("%T.Nam must not be empty", c)))
 	}
-
-	var nam string
-	{
-		nam = handler.Name(c.Han)
-	}
-
-	var reg registry.Interface
-	{
-		reg = newRegistry(c.Env, c.Log, c.Met, nam)
+	if c.Reg == nil {
+		tracer.Panic(tracer.Mask(fmt.Errorf("%TReg must not be empty", c)))
 	}
 
 	return &Metrics{
 		fil: c.Fil,
 		han: c.Han,
 		log: c.Log,
-		nam: nam,
-		reg: reg,
+		nam: c.Nam,
+		reg: c.Reg,
 	}
 }
