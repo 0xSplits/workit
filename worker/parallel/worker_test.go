@@ -174,7 +174,7 @@ func Test_Worker_Parallel_Daemon_metrics(t *testing.T) {
 		res = tesRes(url)
 	}
 
-	pat := `worker_handler_execution_duration_seconds_count\{env="testing",handler="parallel",otel_scope_name="workit\.testing\.splits\.org",otel_scope_schema_url="",otel_scope_version="[^"]*",success="true"\} 2`
+	pat := `worker_handler_execution_total\{env="testing",handler="parallel",otel_scope_name="workit\.testing\.splits\.org",otel_scope_schema_url="",otel_scope_version="[^"]*",success="true"\} 2`
 	rgx := regexp.MustCompile(pat)
 
 	if rgx.MatchString(res) {

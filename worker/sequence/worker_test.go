@@ -262,7 +262,7 @@ func Test_Worker_Sequence_Daemon_metrics(t *testing.T) {
 		res = tesRes(url)
 	}
 
-	pat := `worker_handler_execution_duration_seconds_count\{env="testing",handler="sequence",otel_scope_name="workit\.testing\.splits\.org",otel_scope_schema_url="",otel_scope_version="[^"]*",success="true"\} 5`
+	pat := `worker_handler_execution_total\{env="testing",handler="sequence",otel_scope_name="workit\.testing\.splits\.org",otel_scope_schema_url="",otel_scope_version="[^"]*",success="true"\} 5`
 	rgx := regexp.MustCompile(pat)
 
 	if rgx.MatchString(res) {

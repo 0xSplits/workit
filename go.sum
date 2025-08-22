@@ -1,5 +1,5 @@
-github.com/0xSplits/otelgo v0.1.1 h1:cY/3Vxl0cyu5QuepdV5LLEapjXP5zJLB5lJxgZt155E=
-github.com/0xSplits/otelgo v0.1.1/go.mod h1:YnmWxWUT7xaMQTF3FBmN8GuvIMafSJ/lYhlyIBlr99w=
+github.com/0xSplits/otelgo v0.1.2 h1:QjbUMNNQcUsnkOmZ35bc3Fbhz7u0PA611LYrh4aOpPk=
+github.com/0xSplits/otelgo v0.1.2/go.mod h1:YnmWxWUT7xaMQTF3FBmN8GuvIMafSJ/lYhlyIBlr99w=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=

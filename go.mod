@@ -3,7 +3,7 @@ module github.com/0xSplits/workit
 go 1.24
 
 require (
-	github.com/0xSplits/otelgo v0.1.1
+	github.com/0xSplits/otelgo v0.1.2
 	github.com/google/go-cmp v0.7.0
 	github.com/gorilla/mux v1.8.1
 	github.com/prometheus/client_golang v1.23.0
