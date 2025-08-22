@@ -8,6 +8,10 @@ import (
 	"github.com/0xSplits/workit/handler/proxy"
 )
 
+// New returns a metrics handler by wrapping the given implementation of
+// handler.Ensure within a proxy handler. The returned metrics handler is
+// configured with its own metrics registry according to the underlying
+// configuration.
 func (r *Registry) New(han handler.Ensure) handler.Interface {
 	var pro handler.Interface
 	{

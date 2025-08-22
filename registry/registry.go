@@ -29,6 +29,8 @@ type Config struct {
 	Met metric.Meter
 }
 
+// Registry contains all necessary information to wrap user specific worker
+// handlers within new metrics handlers when instantiating a new worker engine.
 type Registry struct {
 	env string
 	fil func(error) bool

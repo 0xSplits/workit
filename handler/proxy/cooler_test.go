@@ -14,12 +14,12 @@ func Test_Handler_Proxy_Cooler(t *testing.T) {
 		han handler.Ensure
 		coo time.Duration
 	}{
-		// Case 000
+		// Case 000, handler.Cooler not implemented
 		{
 			han: &testEnsure{},
 			coo: 0,
 		},
-		// Case 001
+		// Case 001, handler.Cooler implemented
 		{
 			han: &testCooler{coo: 3},
 			coo: 3,

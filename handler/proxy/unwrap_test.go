@@ -17,11 +17,11 @@ func Test_Handler_Proxy_Unwrap(t *testing.T) {
 	testCases := []struct {
 		han handler.Ensure
 	}{
-		// Case 000
+		// Case 000, handler.Unwrap not implemented
 		{
 			han: ens,
 		},
-		// Case 001
+		// Case 001, handler.Unwrap implemented
 		{
 			han: &testUnwrap{wrp: ens},
 		},
