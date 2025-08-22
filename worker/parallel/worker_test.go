@@ -28,17 +28,12 @@ import (
 func Test_Worker_Parallel_Daemon_error(t *testing.T) {
 	var buf syncBuffer
 
-	var err error
-	{
-		err = errors.New("test error")
-	}
-
 	var wor *Worker
 	{
 		wor = New(Config{
 			Han: []handler.Cooler{
 				&testHandler{coo: time.Hour},
-				&testHandler{coo: time.Hour, err: err},
+				&testHandler{coo: time.Hour, err: errors.New("test error")},
 			},
 			Log: logger.New(logger.Config{
 				Filter: logger.NewLevelFilter("error"),
@@ -81,17 +76,12 @@ func Test_Worker_Parallel_Daemon_error(t *testing.T) {
 func Test_Worker_Parallel_Daemon_filter(t *testing.T) {
 	var buf syncBuffer
 
-	var err error
-	{
-		err = errors.New("test error")
-	}
-
 	var wor *Worker
 	{
 		wor = New(Config{
 			Han: []handler.Cooler{
 				&testHandler{coo: time.Hour},
-				&testHandler{coo: time.Hour, err: err},
+				&testHandler{coo: time.Hour, err: errors.New("test error")},
 			},
 			Log: logger.New(logger.Config{
 				Filter: logger.NewLevelFilter("error"),

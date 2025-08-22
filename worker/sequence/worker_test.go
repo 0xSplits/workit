@@ -28,10 +28,8 @@ import (
 func Test_Worker_Sequence_Daemon_error(t *testing.T) {
 	var buf syncBuffer
 
-	var err error
 	var sig chan int
 	{
-		err = errors.New("test error")
 		sig = make(chan int)
 	}
 
@@ -42,7 +40,7 @@ func Test_Worker_Sequence_Daemon_error(t *testing.T) {
 			Han: [][]handler.Ensure{
 				{&errorHandler{sig, 3, nil}},
 				{&errorHandler{sig, 4, nil}},
-				{&errorHandler{sig, 5, err}},
+				{&errorHandler{sig, 5, errors.New("test error")}},
 				{&errorHandler{sig, 6, nil}},
 				{&errorHandler{sig, 7, nil}},
 			},
@@ -95,10 +93,8 @@ func Test_Worker_Sequence_Daemon_error(t *testing.T) {
 func Test_Worker_Sequence_Daemon_filter(t *testing.T) {
 	var buf syncBuffer
 
-	var err error
 	var sig chan int
 	{
-		err = errors.New("test error")
 		sig = make(chan int)
 	}
 
@@ -109,7 +105,7 @@ func Test_Worker_Sequence_Daemon_filter(t *testing.T) {
 			Han: [][]handler.Ensure{
 				{&errorHandler{sig, 3, nil}},
 				{&errorHandler{sig, 4, nil}},
-				{&errorHandler{sig, 5, err}},
+				{&errorHandler{sig, 5, errors.New("test error")}},
 				{&errorHandler{sig, 6, nil}},
 				{&errorHandler{sig, 7, nil}},
 			},
