@@ -52,6 +52,10 @@ type testUnwrap struct {
 	wrp handler.Ensure
 }
 
+func (t *testUnwrap) Active() bool {
+	return true
+}
+
 func (t *testUnwrap) Ensure() error {
 	return nil
 }

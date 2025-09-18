@@ -9,9 +9,14 @@ here are **worker handlers**, which are executed by soecialized worker engines.
 
 ```golang
 // Interface describes the internally wrapped worker handlers used for proper
-// management inside of the various worker engines. External users do not have
-// to be concerned with this interface.
+// management inside of the various worker engines. External users do usually
+// not have to be concerned with this entire interface.
 type Interface interface {
+	// Active returns the underlying worker handler implementation is supposed to
+	// be executed during reconciliation. This might be useful to disable certain
+	// worker handlers for e.g. specific environments.
+	Active() bool
+
 	// Cooler is manadatory to be implemented for worker handlers executed by the
 	// *parallel.Worker engine, because those worker handlers do all run inside
 	// their own isolated failure domains, which require individual cooler durations

@@ -3,12 +3,21 @@ package handler
 import "time"
 
 // Interface describes the internally wrapped worker handlers used for proper
-// management inside of the various worker engines. External users do not have
-// to be concerned with this interface.
+// management inside of the various worker engines. External users do usually
+// not have to be concerned with this entire interface.
 type Interface interface {
 	Cooler
 	Ensure
 	Unwrap
+}
+
+// Active is a scheduler primitive that allows worker handlers to be disabled
+// for arbitrary conditions.
+type Active interface {
+	// Active returns the underlying worker handler implementation is supposed to
+	// be executed during reconciliation. This might be useful to disable certain
+	// worker handlers for e.g. specific environments.
+	Active() bool
 }
 
 // Cooler is manadatory to be implemented for worker handlers executed by the
@@ -30,6 +39,7 @@ type Cooler interface {
 // implement for their own business logic, regardless of the underlying worker
 // engine.
 type Ensure interface {
+	Active
 	// Ensure executes the handler specific business logic in order to complete
 	// the given task, if possible. Any error returned will be emitted using the
 	// underlying logger interface, unless the injected metrics registry is

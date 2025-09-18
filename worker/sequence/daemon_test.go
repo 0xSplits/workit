@@ -23,6 +23,59 @@ import (
 	"github.com/xh3b4sd/logger"
 )
 
+// Test_Worker_Sequence_Daemon_active verifies that the *sequence.Worker allows
+// worker handlers to declare themselves as inactive.
+func Test_Worker_Sequence_Daemon_active(t *testing.T) {
+	var sig chan int
+	{
+		sig = make(chan int)
+	}
+
+	var wor *Worker
+	{
+		wor = New(Config{
+			Coo: time.Hour,
+			Han: [][]handler.Ensure{
+				{&activeHandler{sig, 3, true, false}},
+				{&activeHandler{sig, 4, true, false}},
+				{&activeHandler{sig, 5, false, false}},
+				{&activeHandler{sig, 6, false, false}},
+				{&activeHandler{sig, 7, true, true}},
+			},
+			Log: logger.Fake(),
+			Reg: registry.New(registry.Config{
+				Env: "testing",
+				Log: logger.Fake(),
+				Met: recorder.NewMeter(recorder.MeterConfig{
+					Env: "testing",
+					Sco: "workit",
+					Ver: "v0.1.0",
+				}),
+			}),
+		})
+	}
+
+	{
+		go wor.Daemon()
+	}
+
+	var act []int
+	for x := range sig {
+		act = append(act, x)
+	}
+
+	{
+		time.Sleep(time.Millisecond)
+	}
+
+	{
+		exp := []int{3, 4, 7}
+		if dif := cmp.Diff(exp, act); dif != "" {
+			t.Fatalf("-expected +actual:\n%s", dif)
+		}
+	}
+}
+
 // Test_Worker_Sequence_Daemon_error verifies that the *sequence.Worker executes
 // all handlers in order, until an error occurs.
 func Test_Worker_Sequence_Daemon_error(t *testing.T) {
@@ -88,7 +141,7 @@ func Test_Worker_Sequence_Daemon_error(t *testing.T) {
 	}
 }
 
-// Test_Worker_Sequence_Daemon_cancel verifies that the *sequence.Worker
+// Test_Worker_Sequence_Daemon_filter verifies that the *sequence.Worker
 // does not log filtered errors.
 func Test_Worker_Sequence_Daemon_filter(t *testing.T) {
 	var buf syncBuffer
@@ -348,10 +401,41 @@ func tesSer(reg *prometheus.Registry) (*httptest.Server, string) {
 //
 //
 
+type activeHandler struct {
+	sig chan int
+	num int
+	act bool
+	clo bool
+}
+
+func (h *activeHandler) Active() bool {
+	return h.act
+}
+
+func (h *activeHandler) Ensure() error {
+	{
+		h.sig <- h.num
+	}
+
+	if h.clo {
+		close(h.sig)
+	}
+
+	return nil
+}
+
+//
+//
+//
+
 type errorHandler struct {
 	sig chan int
 	num int
 	err error
+}
+
+func (h *errorHandler) Active() bool {
+	return true
 }
 
 func (h *errorHandler) Ensure() error {
@@ -375,6 +459,10 @@ type orderHandler struct {
 	sig chan int
 	num int
 	clo bool
+}
+
+func (h *orderHandler) Active() bool {
+	return true
 }
 
 func (h *orderHandler) Ensure() error {

@@ -51,6 +51,10 @@ type testCooler struct {
 	coo time.Duration
 }
 
+func (t *testCooler) Active() bool {
+	return true
+}
+
 func (t *testCooler) Ensure() error {
 	return nil
 }
