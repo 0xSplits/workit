@@ -42,6 +42,14 @@ func (w *Worker) ensPar(han []handler.Interface) error {
 	// iteration.
 
 	for _, x := range han {
+		// Continue with the next worker handler without doing any work for this
+		// specific worker handler if this worker handler declares itself as not
+		// active for this reconciliation loop.
+
+		if !x.Active() {
+			continue
+		}
+
 		grp.Go(func() error {
 			// Note that our worker handlers may be wrapped. So we have to call unwrap
 			// before resolving the implementation's identifier in the error case.
@@ -69,6 +77,13 @@ func (w *Worker) ensSeq(han []handler.Interface) error {
 	var x handler.Interface
 	{
 		x = han[0] // the factory at sequence.New must validate against empty steps
+	}
+
+	// Return early without doing any work if this worker handler declares itself
+	// as not active for this reconciliation loop.
+
+	if !x.Active() {
+		return nil
 	}
 
 	// Note that our worker handlers may be wrapped. So we have to call unwrap

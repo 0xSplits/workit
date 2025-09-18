@@ -17,11 +17,70 @@ import (
 	"github.com/0xSplits/otelgo/recorder"
 	"github.com/0xSplits/workit/handler"
 	"github.com/0xSplits/workit/registry"
+	"github.com/google/go-cmp/cmp"
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/xh3b4sd/logger"
 )
+
+// Test_Worker_Parallel_Daemon_active verifies that the *parallel.Worker allows
+// worker handlers to declare themselves as inactive.
+func Test_Worker_Parallel_Daemon_active(t *testing.T) {
+	var sig chan int
+	{
+		sig = make(chan int)
+	}
+
+	var wor *Worker
+	{
+		wor = New(Config{
+			Han: []handler.Cooler{
+				&activeHandler{sig, 3, true},
+				&activeHandler{sig, 4, true},
+				&activeHandler{sig, 5, false},
+				&activeHandler{sig, 6, false},
+				&activeHandler{sig, 7, true},
+			},
+			Log: logger.Fake(),
+			Reg: registry.New(registry.Config{
+				Env: "testing",
+				Log: logger.Fake(),
+				Met: recorder.NewMeter(recorder.MeterConfig{
+					Env: "testing",
+					Sco: "workit",
+					Ver: "v0.1.0",
+				}),
+			}),
+		})
+	}
+
+	{
+		go wor.Daemon()
+	}
+
+	var act []int
+	for x := range sig {
+		{
+			act = append(act, x)
+		}
+
+		if len(act) >= 3 {
+			close(sig)
+		}
+	}
+
+	{
+		slices.Sort(act)
+	}
+
+	{
+		exp := []int{3, 4, 7}
+		if dif := cmp.Diff(exp, act); dif != "" {
+			t.Fatalf("-expected +actual:\n%s", dif)
+		}
+	}
+}
 
 // Test_Worker_Parallel_Daemon_error verifies that the *parallel.Worker logs any
 // error that occurs.
@@ -375,11 +434,41 @@ func tesSer(reg *prometheus.Registry) (*httptest.Server, string) {
 //
 //
 
+type activeHandler struct {
+	sig chan int
+	num int
+	act bool
+}
+
+func (h *activeHandler) Active() bool {
+	return h.act
+}
+
+func (h *activeHandler) Cooler() time.Duration {
+	return time.Hour
+}
+
+func (h *activeHandler) Ensure() error {
+	{
+		h.sig <- h.num
+	}
+
+	return nil
+}
+
+//
+//
+//
+
 type testHandler struct {
 	coo time.Duration
 	err error
 	inp chan string
 	out chan string
+}
+
+func (h *testHandler) Active() bool {
+	return true
 }
 
 // Cooler simply returns the underlying cooldown duration, defining how long

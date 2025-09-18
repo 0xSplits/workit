@@ -9,14 +9,16 @@ import (
 
 func (w *Worker) ensure(han handler.Interface) {
 	for {
-		// Execute the worker handler and log any runtime error of this handler's
-		// business logic if the configured error matcher permits it. Note that any
-		// error caught here may never originate from the worker engine's internal
-		// metric registry.
+		// Execute the worker handler if it declares itself to be active. Also log
+		// any runtime error of this handler's business logic if the configured
+		// error matcher permits it. Note that any error caught here may never
+		// originate from the worker engine's internal metric registry.
 
-		err := han.Ensure()
-		if err != nil && !w.reg.Log(err) {
-			w.error(tracer.Mask(err, tracer.Context{Key: "handler", Value: handler.Name(han.Unwrap())}))
+		if han.Active() {
+			err := han.Ensure()
+			if err != nil && !w.reg.Log(err) {
+				w.error(tracer.Mask(err, tracer.Context{Key: "handler", Value: handler.Name(han.Unwrap())}))
+			}
 		}
 
 		// Sleep for the given duration after this worker handler has been executed.
