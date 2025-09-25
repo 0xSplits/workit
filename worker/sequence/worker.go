@@ -6,15 +6,18 @@ import (
 
 	"github.com/0xSplits/workit/handler"
 	"github.com/0xSplits/workit/registry"
+	"github.com/xh3b4sd/choreo/ticker"
 	"github.com/xh3b4sd/logger"
 	"github.com/xh3b4sd/tracer"
 )
 
 type Config struct {
-	// Coo is the optional amount of time that this sequence handler specifies to
-	// wait before being executed again. This cooler duration is not an interval
-	// on a strict schedule. This is simply the time to sleep after execution,
-	// before another cycle repeats.
+	// Coo is the optional amount of time that this sequence worker engine
+	// specifies to wait before being executed again. This cooler duration is not
+	// an interval on a strict schedule. This is simply the time to sleep after
+	// execution, before another cycle repeats. Note that Worker.Daemon is
+	// explicitly disabled if Coo is not provided. Regardless, Worker.Ensure may
+	// be used on demand even without specified cooler duration.
 	Coo time.Duration
 
 	// Han is the list of worker handlers implementing the actual business logic
@@ -35,10 +38,10 @@ type Config struct {
 }
 
 type Worker struct {
-	coo time.Duration
 	han [][]handler.Interface
 	log logger.Interface
 	reg *registry.Registry
+	tic ticker.Interface
 }
 
 func New(c Config) *Worker {
@@ -83,10 +86,20 @@ func New(c Config) *Worker {
 		}
 	}
 
+	// Allocate a real or fake ticker based on the injected cooler duration, so
+	// that Worker.Ensure may be used without the need for Worker.Daemon.
+
+	var tic ticker.Interface
+	if c.Coo > 0 {
+		tic = ticker.New(ticker.Config{Dur: c.Coo})
+	} else {
+		tic = ticker.Fake{}
+	}
+
 	return &Worker{
-		coo: c.Coo,
 		han: han,
 		log: c.Log,
 		reg: c.Reg,
+		tic: tic,
 	}
 }

@@ -141,72 +141,6 @@ func Test_Worker_Sequence_Daemon_error(t *testing.T) {
 	}
 }
 
-// Test_Worker_Sequence_Daemon_filter verifies that the *sequence.Worker
-// does not log filtered errors.
-func Test_Worker_Sequence_Daemon_filter(t *testing.T) {
-	var buf syncBuffer
-
-	var sig chan int
-	{
-		sig = make(chan int)
-	}
-
-	var wor *Worker
-	{
-		wor = New(Config{
-			Coo: time.Hour,
-			Han: [][]handler.Ensure{
-				{&errorHandler{sig, 3, nil}},
-				{&errorHandler{sig, 4, nil}},
-				{&errorHandler{sig, 5, errors.New("test error")}},
-				{&errorHandler{sig, 6, nil}},
-				{&errorHandler{sig, 7, nil}},
-			},
-			Log: logger.New(logger.Config{
-				Filter: logger.NewLevelFilter("error"),
-				Writer: &buf,
-			}),
-			Reg: registry.New(registry.Config{
-				Env: "testing",
-				Fil: isErr,
-				Log: logger.Fake(),
-				Met: recorder.NewMeter(recorder.MeterConfig{
-					Env: "testing",
-					Sco: "workit",
-					Ver: "v0.1.0",
-				}),
-			}),
-		})
-	}
-
-	{
-		go wor.Daemon()
-	}
-
-	var act []int
-	for x := range sig {
-		act = append(act, x)
-	}
-
-	{
-		time.Sleep(time.Millisecond)
-	}
-
-	{
-		exp := []int{3, 4, 5}
-		if dif := cmp.Diff(exp, act); dif != "" {
-			t.Fatalf("-expected +actual:\n%s", dif)
-		}
-	}
-
-	{
-		exp := ""
-		if dif := cmp.Diff(exp, buf.String()); dif != "" {
-			t.Fatalf("-expected +actual:\n%s", dif)
-		}
-	}
-}
-
 // Test_Worker_Sequence_Daemon_order verifies that the *sequence.Worker executes
 // all handlers in order.
 func Test_Worker_Sequence_Daemon_order(t *testing.T) {
@@ -342,6 +276,70 @@ func Test_Worker_Sequence_Daemon_metrics(t *testing.T) {
 
 	if !rgx.MatchString(res) {
 		t.Fatal("expected", true, "got", false)
+	}
+}
+
+// Test_Worker_Sequence_Ensure_filter verifies that the *sequence.Worker does
+// not log filtered errors. Note that this test also covers the case of
+// Config.Coo to be empty, causing the worker engine to allocate a fake ticker
+// internally, which can be done to only use Worker.Ensure without
+// Worker.Daemon.
+func Test_Worker_Sequence_Ensure_filter(t *testing.T) {
+	var buf syncBuffer
+
+	var sig chan int
+	{
+		sig = make(chan int, 5)
+	}
+
+	var wor *Worker
+	{
+		wor = New(Config{
+			Han: [][]handler.Ensure{
+				{&errorHandler{sig, 3, nil}},
+				{&errorHandler{sig, 4, nil}},
+				{&errorHandler{sig, 5, errors.New("test error")}},
+				{&errorHandler{sig, 6, nil}},
+				{&errorHandler{sig, 7, nil}},
+			},
+			Log: logger.New(logger.Config{
+				Filter: logger.NewLevelFilter("error"),
+				Writer: &buf,
+			}),
+			Reg: registry.New(registry.Config{
+				Env: "testing",
+				Fil: isErr,
+				Log: logger.Fake(),
+				Met: recorder.NewMeter(recorder.MeterConfig{
+					Env: "testing",
+					Sco: "workit",
+					Ver: "v0.1.0",
+				}),
+			}),
+		})
+	}
+
+	{
+		wor.ensure() // Ensure instead of Daemon
+	}
+
+	var act []int
+	for x := range sig {
+		act = append(act, x)
+	}
+
+	{
+		exp := []int{3, 4, 5}
+		if dif := cmp.Diff(exp, act); dif != "" {
+			t.Fatalf("-expected +actual:\n%s", dif)
+		}
+	}
+
+	{
+		exp := ""
+		if dif := cmp.Diff(exp, buf.String()); dif != "" {
+			t.Fatalf("-expected +actual:\n%s", dif)
+		}
 	}
 }
 

@@ -1,44 +1,36 @@
 package sequence
 
 import (
-	"time"
-
-	"github.com/xh3b4sd/tracer"
+	"github.com/xh3b4sd/choreo/ticker"
 )
 
 func (w *Worker) Daemon() {
+	// Explicitly disable Worker.Daemon if no cooler duration was provided. This
+	// turns Worker.Daemon into a noop without blocking and side effects.
+
+	if _, typ := w.tic.(ticker.Fake); typ {
+		return
+	}
+
 	w.log.Log(
 		"level", "info",
 		"message", "worker is executing tasks",
 		"pipelines", "1",
 	)
 
-	for {
-		// Execute the configured worker handler and log any runtime error of this
-		// handler's business logic. Any error returned to us may be annotated with
-		// the underlying handler name.
+	// Run Worker.Ensure once initially and rely on the underlying ticker
+	// implementation to further trigger scheduled execution.
 
-		err := w.Ensure()
-		if err != nil && !w.reg.Log(err) {
-			w.error(tracer.Mask(err))
-		}
-
-		// Sleep for the given cooler duration after the configured worker handler
-		// has been executed. Not all worker handlers implement the handler.Cooler
-		// interface, so in case we receive no cooler duration at all, we do not
-		// invoke the runtime sleep functions. If we were to call time.Sleep with 0,
-		// then we would invoke the Golang scheduler, which is simply not necessary.
-
-		if w.coo > 0 {
-			time.Sleep(w.coo)
-		}
+	{
+		w.ensure()
 	}
-}
 
-func (w *Worker) error(err error) {
-	w.log.Log(
-		"level", "error",
-		"message", "worker execution failed",
-		"stack", tracer.Json(err),
-	)
+	// Execute Worker.Ensure based on the internally managed ticker
+	// implementation. Note that the delivered ticks are synchronized with the
+	// actual execution of Worker.Ensure, so that external calls reset the
+	// effective wait duration.
+
+	for range w.tic.Ticks() {
+		w.ensure()
+	}
 }
