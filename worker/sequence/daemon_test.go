@@ -320,6 +320,10 @@ func Test_Worker_Sequence_Ensure_filter(t *testing.T) {
 	}
 
 	{
+		wor.Daemon() // noop without cooler duration, would block otherwise
+	}
+
+	{
 		wor.ensure() // Ensure instead of Daemon
 	}
 
