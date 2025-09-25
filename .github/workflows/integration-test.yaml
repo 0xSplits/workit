@@ -1,0 +1,25 @@
+name: "Integration Test"
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  integration-test:
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: "Setup Git Project"
+        uses: "actions/checkout@v5"
+
+      - name: "Setup Go Env"
+        uses: "actions/setup-go@v6"
+        with:
+          cache: true
+          go-version: "1.24.0"
+
+      - name: "Check Go Tests"
+        run: |
+          go test -tags=integration ./worker/sequence -v -race -run Test_Worker_Sequence_Integration

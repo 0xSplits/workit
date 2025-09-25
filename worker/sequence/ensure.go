@@ -7,10 +7,19 @@ import (
 )
 
 // Ensure executes a single reconciliation loop of the directed acyclic graph.
-// This method is exposed publicly so that not only the worker daemon can run
-// this sequence of worker handlers continuously, but also to enable other
-// commands to run this sequence once in a controlled fashion.
+// This method is exposed publicly so that not only Worker.Daemon can run this
+// sequence of worker handlers continuously, but also to enable users to run
+// this sequence once in a controlled fashion.
 func (w *Worker) Ensure() error {
+	// After every the graph execution, reset the internal ticker so that we sleep
+	// again for the configured wait duration. Doing this here enables the user to
+	// call Worker.Ensure externally on demand and maintain the desired schedule
+	// even if intermittent executions occur.
+
+	{
+		defer w.tic.Reset()
+	}
+
 	for _, x := range w.han {
 		var err error
 
@@ -95,4 +104,19 @@ func (w *Worker) ensSeq(han []handler.Interface) error {
 	}
 
 	return nil
+}
+
+func (w *Worker) ensure() {
+	err := w.Ensure()
+	if err != nil && !w.reg.Log(err) {
+		w.error(tracer.Mask(err)) // only log if not filtered
+	}
+}
+
+func (w *Worker) error(err error) {
+	w.log.Log(
+		"level", "error",
+		"message", "worker execution failed",
+		"stack", tracer.Json(err),
+	)
 }
